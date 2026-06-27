@@ -732,14 +732,11 @@ async function manageCloudTrack(action, trackIndex) {
         artist: nextArtist.trim(),
         title: nextTitle.trim()
       });
-      const serverTracks = await getServerCloudTracks();
-      const serverTrack = serverTracks.find((item) => item.fileName === track.fileName);
-      if (!serverTrack || serverTrack.artist !== nextArtist.trim() || serverTrack.title !== nextTitle.trim()) {
-        throw new Error("改名失败：服务器没有保存新名称，请刷新后再试。");
+      if (!data.track?.fileName || !data.track?.src) {
+        throw new Error("改名失败：服务器没有返回新的歌曲文件，请稍后再试。");
       }
       const updatedTrack = normalizeTrack({
         ...track,
-        ...serverTrack,
         ...data.track,
         source: "cloud",
         cover: track.cover
