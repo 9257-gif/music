@@ -131,6 +131,13 @@ function normalizeTrack(track, index) {
   };
 }
 
+function rebuildCloudIndexes() {
+  cloudTrackIndexes = tracks
+    .map((track, index) => ({ track, index }))
+    .filter(({ track }) => track.source === "cloud")
+    .map(({ index }) => index);
+}
+
 async function loadPublishedTracks() {
   const loadedTracks = [];
 
@@ -161,10 +168,7 @@ async function loadPublishedTracks() {
   }
 
   tracks.splice(0, tracks.length, ...loadedTracks);
-  cloudTrackIndexes = tracks
-    .map((track, index) => ({ track, index }))
-    .filter(({ track }) => track.source === "cloud")
-    .map(({ index }) => index);
+  rebuildCloudIndexes();
 }
 
 function getMoods() {
@@ -682,7 +686,15 @@ async function manageCloudTrack(action, trackIndex) {
       els.cloudUploadStatus.textContent = "正在删除歌曲...";
       if (trackIndex === state.current) pause();
       await requestTrackManagement("delete", track);
-      await refreshPublishedTracks(false);
+      tracks.splice(trackIndex, 1);
+      if (state.current > trackIndex) {
+        state.current -= 1;
+      } else if (state.current >= tracks.length) {
+        state.current = Math.max(0, tracks.length - 1);
+      }
+      state.elapsed = 0;
+      rebuildCloudIndexes();
+      render();
       els.cloudUploadStatus.textContent = "删除成功，管理员歌曲列表已更新。";
       return;
     }
@@ -694,11 +706,26 @@ async function manageCloudTrack(action, trackIndex) {
       if (nextTitle === null) return;
 
       els.cloudUploadStatus.textContent = "正在修改歌曲名称...";
-      await requestTrackManagement("rename", track, {
+      const data = await requestTrackManagement("rename", track, {
         artist: nextArtist.trim(),
         title: nextTitle.trim()
       });
-      await refreshPublishedTracks(false);
+      const updatedTrack = normalizeTrack({
+        ...track,
+        ...data.track,
+        source: "cloud",
+        cover: track.cover
+      }, trackIndex);
+      tracks[trackIndex] = updatedTrack;
+      rebuildCloudIndexes();
+      if (state.current === trackIndex && state.media) {
+        const wasPlaying = state.playing;
+        state.media.pause();
+        state.media.src = updatedTrack.src;
+        state.elapsed = 0;
+        if (wasPlaying) play();
+      }
+      render();
       els.cloudUploadStatus.textContent = "改名成功，管理员歌曲列表已更新。";
     }
   } catch (error) {

@@ -78,7 +78,20 @@ async function handleManage(body) {
     });
     await del(fileName);
 
-    return Response.json({ ok: true, fileName: copied.pathname, src: copied.url });
+    return Response.json({
+      ok: true,
+      track: {
+        title,
+        artist,
+        album: "在线上传",
+        mood: "在线歌曲",
+        tag: extension.toUpperCase(),
+        duration: 0,
+        src: copied.url,
+        fileName: copied.pathname,
+        uploadedAt: new Date().toISOString()
+      }
+    });
   }
 
   throw new Error("不支持的管理操作。");

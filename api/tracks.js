@@ -14,6 +14,7 @@ export async function GET() {
   try {
     const result = await list({ prefix: "songs/uploads/", limit: 1000 });
     const tracks = result.blobs
+      .sort((a, b) => new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime())
       .map((blob, index) => {
         const meta = parseTrackName(blob.pathname, index);
         const extension = blob.pathname.split(".").pop()?.toUpperCase() || "AUDIO";
@@ -30,9 +31,18 @@ export async function GET() {
         };
       });
 
-    return Response.json({ tracks });
+    return Response.json({ tracks }, {
+      headers: {
+        "Cache-Control": "no-store"
+      }
+    });
   } catch (error) {
-    return Response.json({ tracks: [], error: error.message }, { status: 200 });
+    return Response.json({ tracks: [], error: error.message }, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store"
+      }
+    });
   }
 }
 
