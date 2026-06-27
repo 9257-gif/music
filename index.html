@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>音乐播放器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="player-shell">
+      <section class="library-panel" aria-label="音乐库">
+        <div class="brand-row">
+          <div class="brand-mark"><iconify-icon icon="solar:music-note-3-bold-duotone"></iconify-icon></div>
+          <div>
+            <strong>Pulse Room</strong>
+            <span>私人音乐舱</span>
+          </div>
+        </div>
+
+        <label class="search-box">
+          <iconify-icon icon="solar:magnifer-linear"></iconify-icon>
+          <input id="searchInput" type="search" placeholder="搜索歌曲、艺人或专辑" />
+        </label>
+
+        <label class="upload-card" for="musicUpload">
+          <input id="musicUpload" type="file" accept="audio/*" multiple />
+          <span class="upload-icon"><iconify-icon icon="solar:upload-track-2-linear"></iconify-icon></span>
+          <span>
+            <strong>导入本地音乐</strong>
+            <small id="uploadHint">支持 MP3、WAV、M4A 等音频文件</small>
+          </span>
+        </label>
+
+        <div class="mood-tabs" id="moodTabs" aria-label="音乐分类"></div>
+
+        <div class="library-heading">
+          <div>
+            <h1>今日播放</h1>
+            <p id="trackCount">0 首歌曲</p>
+          </div>
+          <button class="ghost-button" id="shuffleListButton">
+            <iconify-icon icon="solar:shuffle-linear"></iconify-icon>
+            随机
+          </button>
+        </div>
+
+        <div class="track-list" id="trackList"></div>
+      </section>
+
+      <section class="now-playing" aria-label="当前播放">
+        <header class="topbar">
+          <button class="icon-button active" id="likeButton" aria-label="收藏当前歌曲">
+            <iconify-icon icon="solar:heart-bold"></iconify-icon>
+          </button>
+          <div class="status-pill">
+            <span></span>
+            <strong id="playStatus">Ready</strong>
+          </div>
+          <button class="icon-button" id="queueButton" aria-label="播放列表">
+            <iconify-icon icon="solar:playlist-linear"></iconify-icon>
+          </button>
+        </header>
+
+        <div class="visual-stage">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="album-art" id="albumArt">
+            <div class="disc-ring"></div>
+            <div class="disc-core"></div>
+          </div>
+        </div>
+
+        <div class="track-meta">
+          <span id="trackMood">夜间律动</span>
+          <h2 id="trackTitle">Midnight Signal</h2>
+          <p id="trackArtist">Noir District</p>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="time-row">
+            <span id="currentTime">0:00</span>
+            <span id="duration">0:00</span>
+          </div>
+          <input id="progressBar" class="range progress" type="range" min="0" max="100" value="0" />
+        </div>
+
+        <div class="controls">
+          <button class="control-button" id="repeatButton" aria-label="循环播放">
+            <iconify-icon icon="solar:repeat-linear"></iconify-icon>
+          </button>
+          <button class="control-button" id="prevButton" aria-label="上一首">
+            <iconify-icon icon="solar:skip-previous-bold"></iconify-icon>
+          </button>
+          <button class="play-button" id="playButton" aria-label="播放或暂停">
+            <iconify-icon icon="solar:play-bold" id="playIcon"></iconify-icon>
+          </button>
+          <button class="control-button" id="nextButton" aria-label="下一首">
+            <iconify-icon icon="solar:skip-next-bold"></iconify-icon>
+          </button>
+          <button class="control-button" id="shuffleButton" aria-label="随机播放">
+            <iconify-icon icon="solar:shuffle-linear"></iconify-icon>
+          </button>
+        </div>
+
+        <div class="volume-card">
+          <iconify-icon icon="solar:volume-loud-linear"></iconify-icon>
+          <input id="volumeBar" class="range" type="range" min="0" max="100" value="72" aria-label="音量" />
+          <strong id="volumeValue">72%</strong>
+        </div>
+      </section>
+
+      <aside class="queue-panel" id="queuePanel" aria-label="播放队列">
+        <div class="queue-card">
+          <div class="queue-heading">
+            <h2>播放队列</h2>
+            <span id="queueState">顺序播放</span>
+          </div>
+          <div class="mini-eq" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div id="queueList" class="queue-list"></div>
+        </div>
+
+        <div class="insight-card">
+          <div>
+            <span>本次氛围</span>
+            <strong id="sessionMood">深夜 / 专注 / 合成器</strong>
+          </div>
+          <iconify-icon icon="solar:stars-bold-duotone"></iconify-icon>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
