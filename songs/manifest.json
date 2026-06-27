@@ -1,0 +1,13 @@
+{
+  "tracks": [
+    {
+      "title": "那天下雨了",
+      "artist": "周杰伦",
+      "album": "公开歌曲库",
+      "mood": "华语流行",
+      "tag": "MP3",
+      "duration": 0,
+      "src": "./songs/jay-chou-na-tian-xia-yu-le.mp3"
+    }
+  ]
+}

@@ -33,10 +33,15 @@
           <input id="musicUpload" type="file" accept="audio/*" multiple />
           <span class="upload-icon"><iconify-icon icon="solar:upload-track-2-linear"></iconify-icon></span>
           <span>
-            <strong>导入本地音乐</strong>
-            <small id="uploadHint">支持 MP3、WAV、M4A 等音频文件</small>
+            <strong>本机临时试听</strong>
+            <small id="uploadHint">仅你当前浏览器可听；要让别人听，请把歌曲放进 songs 文件夹并部署</small>
           </span>
         </label>
+
+        <div class="publish-card">
+          <strong>公开歌曲库</strong>
+          <p>网站会读取 <code>songs/manifest.json</code>。这里登记的歌曲部署后，别人打开网址也能听。</p>
+        </div>
 
         <div class="mood-tabs" id="moodTabs" aria-label="音乐分类"></div>
 

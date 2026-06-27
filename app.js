@@ -1,64 +1,11 @@
-const tracks = [
-  {
-    title: "Midnight Signal",
-    artist: "Noir District",
-    album: "After Hours",
-    mood: "夜间律动",
-    tag: "Synth",
-    duration: 214,
-    frequency: 164.81,
-    cover: "linear-gradient(135deg, #10100f 0%, #3b3027 38%, #efc45a 100%)"
-  },
-  {
-    title: "Soft Static",
-    artist: "Mira Vale",
-    album: "Warm Lines",
-    mood: "放松",
-    tag: "Chill",
-    duration: 188,
-    frequency: 220,
-    cover: "linear-gradient(135deg, #24312d 0%, #4fc3a6 46%, #f2d47a 100%)"
-  },
-  {
-    title: "Glass Arcade",
-    artist: "Pixel Harbor",
-    album: "Neon Walk",
-    mood: "通勤",
-    tag: "Electronic",
-    duration: 236,
-    frequency: 246.94,
-    cover: "linear-gradient(135deg, #1d2027 0%, #3d6d8a 45%, #e66f58 100%)"
-  },
-  {
-    title: "Amber Rain",
-    artist: "Luna Field",
-    album: "Window Seat",
-    mood: "专注",
-    tag: "Lo-fi",
-    duration: 201,
-    frequency: 196,
-    cover: "linear-gradient(135deg, #141412 0%, #735a3a 45%, #eab95a 100%)"
-  },
-  {
-    title: "City Bloom",
-    artist: "The Low Suns",
-    album: "Rooftop Season",
-    mood: "晴朗",
-    tag: "Indie",
-    duration: 225,
-    frequency: 293.66,
-    cover: "linear-gradient(135deg, #10201b 0%, #4fc3a6 42%, #f7f4ea 100%)"
-  },
-  {
-    title: "Velvet Engine",
-    artist: "Cassette Atlas",
-    album: "Drive Home",
-    mood: "能量",
-    tag: "Retro",
-    duration: 242,
-    frequency: 329.63,
-    cover: "linear-gradient(135deg, #201616 0%, #874033 44%, #efc45a 100%)"
-  }
+const tracks = [];
+
+const coverPalette = [
+  "linear-gradient(135deg, #211f1a 0%, #4fc3a6 44%, #efc45a 100%)",
+  "linear-gradient(135deg, #1d2027 0%, #7b6bd6 45%, #e66f58 100%)",
+  "linear-gradient(135deg, #1e1714 0%, #b66a48 45%, #f2d47a 100%)",
+  "linear-gradient(135deg, #111d1b 0%, #2c8f79 45%, #f7f4ea 100%)",
+  "linear-gradient(135deg, #151515 0%, #735a3a 42%, #efc45a 100%)"
 ];
 
 const state = {
@@ -130,13 +77,37 @@ function splitFileName(name) {
 }
 
 function makeUploadCover(index) {
-  const covers = [
-    "linear-gradient(135deg, #211f1a 0%, #4fc3a6 44%, #efc45a 100%)",
-    "linear-gradient(135deg, #1d2027 0%, #7b6bd6 45%, #e66f58 100%)",
-    "linear-gradient(135deg, #1e1714 0%, #b66a48 45%, #f2d47a 100%)",
-    "linear-gradient(135deg, #111d1b 0%, #2c8f79 45%, #f7f4ea 100%)"
-  ];
-  return covers[index % covers.length];
+  return coverPalette[index % coverPalette.length];
+}
+
+function normalizeTrack(track, index) {
+  return {
+    title: track.title || "未命名歌曲",
+    artist: track.artist || "未知歌手",
+    album: track.album || "公开歌曲库",
+    mood: track.mood || "公开歌曲",
+    tag: track.tag || "Audio",
+    duration: Number(track.duration) || 0,
+    src: track.src,
+    fileName: track.fileName || track.src,
+    cover: track.cover || makeUploadCover(index),
+    published: true
+  };
+}
+
+async function loadPublishedTracks() {
+  try {
+    const response = await fetch("./songs/manifest.json", { cache: "no-store" });
+    if (!response.ok) throw new Error("manifest missing");
+    const data = await response.json();
+    const publishedTracks = Array.isArray(data.tracks) ? data.tracks : [];
+    publishedTracks
+      .filter((track) => track.src)
+      .map((track, index) => normalizeTrack(track, index))
+      .forEach((track) => tracks.push(track));
+  } catch {
+    // No published songs yet. The UI will show instructions.
+  }
 }
 
 function getMoods() {
@@ -172,7 +143,13 @@ function renderTrackList() {
   els.trackCount.textContent = `${visibleTracks.length} 首歌曲`;
 
   if (!visibleTracks.length) {
-    els.trackList.innerHTML = `<div class="empty-list">没有找到匹配的歌曲</div>`;
+    const hasQuery = state.query || state.mood !== "全部";
+    els.trackList.innerHTML = hasQuery
+      ? `<div class="empty-list">没有找到匹配的歌曲</div>`
+      : `<div class="empty-list">
+          <strong>还没有公开歌曲</strong>
+          <span>把 MP3/M4A/WAV 放入 <code>songs/</code>，并在 <code>songs/manifest.json</code> 添加歌曲信息后部署。</span>
+        </div>`;
     return;
   }
 
@@ -193,6 +170,11 @@ function renderTrackList() {
 }
 
 function renderQueue() {
+  if (!tracks.length) {
+    els.queueList.innerHTML = `<div class="empty-list compact">暂无播放队列</div>`;
+    return;
+  }
+
   els.queueList.innerHTML = tracks.map((track, index) => `
     <button class="queue-row ${index === state.current ? "active" : ""}" data-index="${index}">
       <span class="queue-cover" style="--cover:${track.cover}"></span>
@@ -212,6 +194,23 @@ function renderQueue() {
 }
 
 function renderNowPlaying() {
+  if (!tracks.length) {
+    els.albumArt.style.setProperty("--cover", makeUploadCover(0));
+    els.albumArt.classList.remove("playing");
+    els.title.textContent = "等待添加歌曲";
+    els.artist.textContent = "把你的音频文件放进 songs 文件夹，部署后别人也能听";
+    els.mood.textContent = "公开歌曲库";
+    els.currentTime.textContent = "0:00";
+    els.duration.textContent = "0:00";
+    els.progress.value = 0;
+    els.playIcon.setAttribute("icon", "solar:play-bold");
+    els.playStatus.textContent = "No songs";
+    els.eq.classList.remove("playing");
+    els.queueState.textContent = "暂无歌曲";
+    els.sessionMood.textContent = "等待发布歌曲";
+    return;
+  }
+
   const track = tracks[state.current];
   const progress = track.duration ? (state.elapsed / track.duration) * 100 : 0;
 
@@ -353,6 +352,7 @@ function startTimer() {
 }
 
 function play() {
+  if (!tracks.length) return;
   const track = tracks[state.current];
   state.playing = true;
 
@@ -396,6 +396,7 @@ function togglePlay() {
 }
 
 function selectTrack(index, autoplay = false) {
+  if (!tracks.length) return;
   if (state.media) state.media.pause();
   state.current = index;
   state.elapsed = 0;
@@ -407,6 +408,7 @@ function selectTrack(index, autoplay = false) {
 }
 
 function getNextIndex(direction = 1) {
+  if (!tracks.length) return 0;
   if (state.shuffle && direction > 0) {
     let next = state.current;
     while (next === state.current && tracks.length > 1) {
@@ -440,8 +442,8 @@ function addLocalTracks(files) {
     const track = {
       title: meta.title,
       artist: meta.artist,
-      album: "本地音乐",
-      mood: "本地音乐",
+      album: "本机临时试听",
+      mood: "本机试听",
       tag: file.type.split("/")[1]?.toUpperCase() || "Audio",
       duration: 0,
       src: URL.createObjectURL(file),
@@ -458,10 +460,10 @@ function addLocalTracks(files) {
     }, { once: true });
   });
 
-  state.mood = "本地音乐";
+  state.mood = "本机试听";
   state.query = "";
   els.searchInput.value = "";
-  els.uploadHint.textContent = `已导入 ${audioFiles.length} 首本地音乐`;
+  els.uploadHint.textContent = `已临时导入 ${audioFiles.length} 首；刷新页面后会消失`;
   render();
   selectTrack(startIndex, true);
 }
@@ -526,4 +528,9 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") els.queuePanel.classList.remove("open");
 });
 
-render();
+loadPublishedTracks().then(() => {
+  if (tracks.length) {
+    state.current = Math.min(state.current, tracks.length - 1);
+  }
+  render();
+});

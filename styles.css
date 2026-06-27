@@ -202,6 +202,33 @@ button {
   line-height: 1.35;
 }
 
+.publish-card {
+  margin-top: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(79, 195, 166, 0.2);
+  border-radius: 16px;
+  background: rgba(79, 195, 166, 0.07);
+}
+
+.publish-card strong {
+  display: block;
+  color: var(--accent-2);
+  font-size: 13px;
+}
+
+.publish-card p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+code {
+  color: var(--accent);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95em;
+}
+
 .mood-tabs {
   display: flex;
   gap: 8px;
@@ -268,12 +295,29 @@ button {
 
 .empty-list {
   display: grid;
+  gap: 8px;
   min-height: 120px;
   place-items: center;
   border: 1px dashed var(--line);
   border-radius: 16px;
   color: var(--dim);
   font-size: 13px;
+  padding: 18px;
+  text-align: center;
+}
+
+.empty-list strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.empty-list span {
+  max-width: 260px;
+  line-height: 1.6;
+}
+
+.empty-list.compact {
+  min-height: 86px;
 }
 
 .track-row,
