@@ -1,4 +1,12 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "functions": {
+    "api/upload.js": {
+      "includeFiles": "node_modules/@vercel/blob/dist/**"
+    },
+    "api/tracks.js": {
+      "includeFiles": "node_modules/@vercel/blob/dist/**"
+    }
+  }
 }
