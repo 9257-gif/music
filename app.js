@@ -1,3 +1,5 @@
+import { upload } from "@vercel/blob/client";
+
 const tracks = [];
 
 const coverPalette = [
@@ -33,6 +35,13 @@ const els = {
   moodTabs: document.querySelector("#moodTabs"),
   searchInput: document.querySelector("#searchInput"),
   musicUpload: document.querySelector("#musicUpload"),
+  cloudMusicUpload: document.querySelector("#cloudMusicUpload"),
+  cloudUploadButton: document.querySelector("#cloudUploadButton"),
+  cloudFileName: document.querySelector("#cloudFileName"),
+  cloudUploadStatus: document.querySelector("#cloudUploadStatus"),
+  adminPassword: document.querySelector("#adminPassword"),
+  adminArtist: document.querySelector("#adminArtist"),
+  adminTitle: document.querySelector("#adminTitle"),
   uploadHint: document.querySelector("#uploadHint"),
   trackCount: document.querySelector("#trackCount"),
   albumArt: document.querySelector("#albumArt"),
@@ -76,6 +85,18 @@ function splitFileName(name) {
   return { artist: "本地文件", title: cleanName };
 }
 
+function getFileExtension(fileName, fallback = "mp3") {
+  return fileName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || fallback;
+}
+
+function makeSafePathPart(value) {
+  return (value || "untitled")
+    .trim()
+    .replace(/[\\/#?%*:|"<>]/g, "-")
+    .replace(/\s+/g, " ")
+    .slice(0, 80) || "untitled";
+}
+
 function makeUploadCover(index) {
   return coverPalette[index % coverPalette.length];
 }
@@ -96,6 +117,8 @@ function normalizeTrack(track, index) {
 }
 
 async function loadPublishedTracks() {
+  const loadedTracks = [];
+
   try {
     const response = await fetch("./songs/manifest.json", { cache: "no-store" });
     if (!response.ok) throw new Error("manifest missing");
@@ -104,10 +127,25 @@ async function loadPublishedTracks() {
     publishedTracks
       .filter((track) => track.src)
       .map((track, index) => normalizeTrack(track, index))
-      .forEach((track) => tracks.push(track));
+      .forEach((track) => loadedTracks.push(track));
   } catch {
-    // No published songs yet. The UI will show instructions.
+    // No repository songs yet. Blob songs may still be available.
   }
+
+  try {
+    const response = await fetch("./api/tracks", { cache: "no-store" });
+    if (!response.ok) throw new Error("cloud tracks unavailable");
+    const data = await response.json();
+    const cloudTracks = Array.isArray(data.tracks) ? data.tracks : [];
+    cloudTracks
+      .filter((track) => track.src)
+      .map((track, index) => normalizeTrack(track, loadedTracks.length + index))
+      .forEach((track) => loadedTracks.push(track));
+  } catch {
+    // Local preview or missing Blob configuration. The static library still works.
+  }
+
+  tracks.splice(0, tracks.length, ...loadedTracks);
 }
 
 function getMoods() {
@@ -148,7 +186,7 @@ function renderTrackList() {
       ? `<div class="empty-list">没有找到匹配的歌曲</div>`
       : `<div class="empty-list">
           <strong>还没有公开歌曲</strong>
-          <span>把 MP3/M4A/WAV 放入 <code>songs/</code>，并在 <code>songs/manifest.json</code> 添加歌曲信息后部署。</span>
+          <span>用左侧“管理员上传”发布歌曲，或把文件放入 <code>songs/</code> 后部署。</span>
         </div>`;
     return;
   }
@@ -468,6 +506,64 @@ function addLocalTracks(files) {
   selectTrack(startIndex, true);
 }
 
+function refreshPublishedTracks(autoplayLast = false) {
+  const previousLength = tracks.length;
+  return loadPublishedTracks().then(() => {
+    if (tracks.length) {
+      state.current = autoplayLast && tracks.length > previousLength ? tracks.length - 1 : Math.min(state.current, tracks.length - 1);
+    }
+    render();
+  });
+}
+
+async function uploadCloudTrack() {
+  const file = els.cloudMusicUpload.files?.[0];
+  const password = els.adminPassword.value.trim();
+  const parsed = file ? splitFileName(file.name) : { artist: "", title: "" };
+  const artist = els.adminArtist.value.trim() || parsed.artist;
+  const title = els.adminTitle.value.trim() || parsed.title;
+
+  if (!file) {
+    els.cloudUploadStatus.textContent = "请先选择一首音频文件。";
+    return;
+  }
+
+  if (!password) {
+    els.cloudUploadStatus.textContent = "请输入管理员密码。";
+    return;
+  }
+
+  if (!file.type.startsWith("audio/")) {
+    els.cloudUploadStatus.textContent = "请选择 MP3、M4A、WAV 等音频文件。";
+    return;
+  }
+
+  els.cloudUploadButton.disabled = true;
+  els.cloudUploadStatus.textContent = "正在上传，请不要关闭页面...";
+
+  try {
+    const extension = getFileExtension(file.name);
+    const pathname = `songs/uploads/${Date.now()}-${makeSafePathPart(artist)} - ${makeSafePathPart(title)}.${extension}`;
+    await upload(pathname, file, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+      clientPayload: JSON.stringify({ password, artist, title })
+    });
+
+    els.cloudUploadStatus.textContent = "上传成功，正在刷新公开歌曲库...";
+    els.cloudMusicUpload.value = "";
+    els.cloudFileName.textContent = "选择要公开上传的歌曲";
+    els.adminTitle.value = "";
+    await refreshPublishedTracks(true);
+    selectTrack(Math.max(0, tracks.length - 1), false);
+    els.cloudUploadStatus.textContent = "上传成功，别人现在打开网址也能听到。";
+  } catch (error) {
+    els.cloudUploadStatus.textContent = error?.message || "上传失败，请检查管理员密码和 Vercel Blob 配置。";
+  } finally {
+    els.cloudUploadButton.disabled = false;
+  }
+}
+
 els.searchInput.addEventListener("input", (event) => {
   state.query = event.target.value;
   renderTrackList();
@@ -476,6 +572,16 @@ els.musicUpload.addEventListener("change", (event) => {
   addLocalTracks(event.target.files);
   event.target.value = "";
 });
+els.cloudMusicUpload.addEventListener("change", () => {
+  const file = els.cloudMusicUpload.files?.[0];
+  els.cloudFileName.textContent = file ? file.name : "选择要公开上传的歌曲";
+  if (file) {
+    const meta = splitFileName(file.name);
+    if (!els.adminArtist.value) els.adminArtist.value = meta.artist === "本地文件" ? "" : meta.artist;
+    if (!els.adminTitle.value) els.adminTitle.value = meta.title;
+  }
+});
+els.cloudUploadButton.addEventListener("click", uploadCloudTrack);
 
 els.playButton.addEventListener("click", togglePlay);
 els.nextButton.addEventListener("click", nextTrack);
@@ -528,9 +634,4 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") els.queuePanel.classList.remove("open");
 });
 
-loadPublishedTracks().then(() => {
-  if (tracks.length) {
-    state.current = Math.min(state.current, tracks.length - 1);
-  }
-  render();
-});
+refreshPublishedTracks();

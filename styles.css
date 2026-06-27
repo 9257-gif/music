@@ -155,6 +155,100 @@ button {
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
+.admin-upload-card {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(79, 195, 166, 0.26);
+  border-radius: 18px;
+  background: rgba(79, 195, 166, 0.08);
+}
+
+.admin-upload-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.admin-upload-heading strong,
+.admin-upload-heading small {
+  display: block;
+}
+
+.admin-upload-heading strong {
+  font-size: 14px;
+}
+
+.admin-upload-heading small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-upload-card input[type="password"],
+.admin-upload-card input[type="text"] {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  outline: 0;
+  padding: 0 12px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+}
+
+.admin-file-picker {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 11px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.admin-file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.primary-upload-button {
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  color: #15140f;
+  background: linear-gradient(135deg, var(--accent-2), #95f0d7);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.primary-upload-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+#cloudUploadStatus {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .upload-card:hover {
   border-color: rgba(239, 196, 90, 0.62);
   background: rgba(239, 196, 90, 0.13);

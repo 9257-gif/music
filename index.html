@@ -29,6 +29,28 @@
           <input id="searchInput" type="search" placeholder="搜索歌曲、艺人或专辑" />
         </label>
 
+        <div class="admin-upload-card">
+          <div class="admin-upload-heading">
+            <span class="upload-icon"><iconify-icon icon="solar:cloud-upload-linear"></iconify-icon></span>
+            <span>
+              <strong>管理员上传</strong>
+              <small>输入管理员密码后上传，所有打开网址的人都能听到</small>
+            </span>
+          </div>
+          <input id="adminPassword" type="password" placeholder="管理员密码" autocomplete="current-password" />
+          <input id="adminArtist" type="text" placeholder="歌手名，例如 周杰伦" />
+          <input id="adminTitle" type="text" placeholder="歌曲名，例如 那天下雨了" />
+          <label class="admin-file-picker" for="cloudMusicUpload">
+            <input id="cloudMusicUpload" type="file" accept="audio/*" />
+            <span id="cloudFileName">选择要公开上传的歌曲</span>
+          </label>
+          <button class="primary-upload-button" id="cloudUploadButton" type="button">
+            <iconify-icon icon="solar:upload-track-2-linear"></iconify-icon>
+            上传到网站
+          </button>
+          <p id="cloudUploadStatus">上传后的歌曲会自动加入公开歌曲库。</p>
+        </div>
+
         <label class="upload-card" for="musicUpload">
           <input id="musicUpload" type="file" accept="audio/*" multiple />
           <span class="upload-icon"><iconify-icon icon="solar:upload-track-2-linear"></iconify-icon></span>
@@ -143,6 +165,6 @@
       </aside>
     </main>
 
-    <script src="./app.js"></script>
+    <script type="module" src="./app.js"></script>
   </body>
 </html>
