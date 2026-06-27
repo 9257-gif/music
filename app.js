@@ -1,5 +1,11 @@
 import { upload } from "@vercel/blob/client";
 
+const CANONICAL_SITE_URL = "https://music-eight-ochre.vercel.app";
+
+if (window.location.hostname.endsWith("github.io")) {
+  window.location.replace(CANONICAL_SITE_URL);
+}
+
 const tracks = [];
 let cloudTrackIndexes = [];
 

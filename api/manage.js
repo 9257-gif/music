@@ -52,12 +52,14 @@ async function handleManage(body) {
   const action = body?.action;
   const fileName = body?.fileName;
   assertCloudPath(fileName);
+  console.log(`[manage] action=${action} fileName=${fileName}`);
 
   if (action === "delete") {
     await del(fileName);
     const meta = await readTrackMeta();
     delete meta[fileName];
     await writeTrackMeta(meta);
+    console.log(`[manage] deleted fileName=${fileName}`);
     return Response.json({ ok: true });
   }
 
@@ -76,6 +78,7 @@ async function handleManage(body) {
       updatedAt: new Date().toISOString()
     };
     await writeTrackMeta(meta);
+    console.log(`[manage] renamed fileName=${fileName} artist=${artist} title=${title}`);
 
     return Response.json({
       ok: true,

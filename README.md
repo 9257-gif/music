@@ -41,5 +41,7 @@
 部署目标：
 
 ```text
-https://9257-gif.github.io/music/
+https://music-eight-ochre.vercel.app
 ```
+
+请使用 Vercel 地址访问管理功能。GitHub Pages 是静态页面，不能执行上传、改名、删除这类后台操作。
