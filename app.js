@@ -1,6 +1,7 @@
 import { upload } from "@vercel/blob/client";
 
 const CANONICAL_SITE_URL = "https://music-eight-ochre.vercel.app";
+const API_BASE_URL = window.location.hostname.endsWith("github.io") ? CANONICAL_SITE_URL : "";
 
 if (window.location.hostname.endsWith("github.io")) {
   window.location.replace(CANONICAL_SITE_URL);
@@ -161,7 +162,7 @@ async function loadPublishedTracks() {
   }
 
   try {
-    const response = await fetch("./api/tracks", { cache: "no-store" });
+    const response = await fetch(`${API_BASE_URL}/api/tracks`, { cache: "no-store" });
     if (!response.ok) throw new Error("cloud tracks unavailable");
     const data = await response.json();
     const cloudTracks = Array.isArray(data.tracks) ? data.tracks : [];
@@ -618,7 +619,7 @@ async function uploadCloudTrack() {
   els.cloudUploadStatus.textContent = "正在上传，请不要关闭页面...";
 
   try {
-    const checkResponse = await fetch("/api/upload", {
+    const checkResponse = await fetch(`${API_BASE_URL}/api/upload`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ type: "admin.check", password })
@@ -661,7 +662,7 @@ async function requestTrackManagement(action, track, nextMeta = {}) {
     throw new Error("请先在管理员上传区域输入管理员密码 9257。");
   }
 
-  const response = await fetch("/api/manage", {
+  const response = await fetch(`${API_BASE_URL}/api/manage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
@@ -680,6 +681,17 @@ async function requestTrackManagement(action, track, nextMeta = {}) {
   return data;
 }
 
+async function getServerCloudTracks() {
+  const response = await fetch(`${API_BASE_URL}/api/tracks?ts=${Date.now()}`, { cache: "no-store" });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "无法确认服务器歌曲列表，请稍后再试。");
+  }
+
+  return Array.isArray(data.tracks) ? data.tracks : [];
+}
+
 async function manageCloudTrack(action, trackIndex) {
   const track = tracks[trackIndex];
   if (!track || track.source !== "cloud") return;
@@ -692,6 +704,10 @@ async function manageCloudTrack(action, trackIndex) {
       els.cloudUploadStatus.textContent = "正在删除歌曲...";
       if (trackIndex === state.current) pause();
       await requestTrackManagement("delete", track);
+      const serverTracks = await getServerCloudTracks();
+      if (serverTracks.some((serverTrack) => serverTrack.fileName === track.fileName)) {
+        throw new Error("删除失败：服务器上仍然存在这首歌，请刷新后再试。");
+      }
       tracks.splice(trackIndex, 1);
       if (state.current > trackIndex) {
         state.current -= 1;
@@ -716,8 +732,14 @@ async function manageCloudTrack(action, trackIndex) {
         artist: nextArtist.trim(),
         title: nextTitle.trim()
       });
+      const serverTracks = await getServerCloudTracks();
+      const serverTrack = serverTracks.find((item) => item.fileName === track.fileName);
+      if (!serverTrack || serverTrack.artist !== nextArtist.trim() || serverTrack.title !== nextTitle.trim()) {
+        throw new Error("改名失败：服务器没有保存新名称，请刷新后再试。");
+      }
       const updatedTrack = normalizeTrack({
         ...track,
+        ...serverTrack,
         ...data.track,
         source: "cloud",
         cover: track.cover
