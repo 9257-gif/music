@@ -583,6 +583,17 @@ async function uploadCloudTrack() {
   els.cloudUploadStatus.textContent = "正在上传，请不要关闭页面...";
 
   try {
+    const checkResponse = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "admin.check", password })
+    });
+    const checkData = await checkResponse.json().catch(() => ({}));
+
+    if (!checkResponse.ok) {
+      throw new Error(checkData.error || "管理员密码校验失败。");
+    }
+
     const extension = getFileExtension(file.name);
     const pathname = `songs/uploads/${Date.now()}-${makeSafePathPart(artist)} - ${makeSafePathPart(title)}.${extension}`;
     await upload(pathname, file, {
@@ -599,7 +610,10 @@ async function uploadCloudTrack() {
     selectTrack(Math.max(0, tracks.length - 1), false);
     els.cloudUploadStatus.textContent = "上传成功，已加入“管理员上传歌曲”列表。";
   } catch (error) {
-    els.cloudUploadStatus.textContent = error?.message || "上传失败，请检查管理员密码和 Vercel Blob 配置。";
+    const message = error?.message || "上传失败，请检查管理员密码和 Vercel Blob 配置。";
+    els.cloudUploadStatus.textContent = message.includes("retrieve the client token")
+      ? "上传失败：请确认密码是 9257，并刷新页面后重试。"
+      : message;
   } finally {
     els.cloudUploadButton.disabled = false;
   }

@@ -8,21 +8,25 @@ function parsePayload(payload) {
   }
 }
 
+function checkAdminPassword(password) {
+  const expectedPassword = process.env.ADMIN_UPLOAD_PASSWORD;
+
+  if (!expectedPassword) {
+    throw new Error("管理员上传密码还没有配置。");
+  }
+
+  if (password !== expectedPassword) {
+    throw new Error("管理员密码不正确，请输入 9257。");
+  }
+}
+
 async function handleRequest(request, body) {
   const jsonResponse = await handleUpload({
     body,
     request,
     onBeforeGenerateToken: async (_pathname, clientPayload) => {
       const payload = parsePayload(clientPayload);
-      const expectedPassword = process.env.ADMIN_UPLOAD_PASSWORD;
-
-      if (!expectedPassword) {
-        throw new Error("管理员上传密码还没有配置。");
-      }
-
-      if (payload.password !== expectedPassword) {
-        throw new Error("管理员密码不正确。");
-      }
+      checkAdminPassword(payload.password);
 
       return {
         allowedContentTypes: [
@@ -50,6 +54,12 @@ async function handleRequest(request, body) {
 
 export async function POST(request) {
   const body = await request.json();
+
+  if (body?.type === "admin.check") {
+    checkAdminPassword(body.password);
+    return Response.json({ ok: true });
+  }
+
   return handleRequest(request, body);
 }
 
@@ -60,9 +70,17 @@ export default async function handler(request, response) {
   }
 
   try {
-    const result = await handleRequest(request, request.body);
-    const body = await result.json();
-    response.status(result.status).json(body);
+    const body = request.body || {};
+
+    if (body?.type === "admin.check") {
+      checkAdminPassword(body.password);
+      response.status(200).json({ ok: true });
+      return;
+    }
+
+    const result = await handleRequest(request, body);
+    const resultBody = await result.json();
+    response.status(result.status).json(resultBody);
   } catch (error) {
     response.status(400).json({ error: error.message });
   }
