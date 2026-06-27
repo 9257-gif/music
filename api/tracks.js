@@ -25,7 +25,8 @@ export async function GET() {
           tag: (blob.contentType || "").split("/")[1]?.toUpperCase() || extension,
           duration: 0,
           src: blob.url,
-          fileName: blob.pathname
+          fileName: blob.pathname,
+          uploadedAt: blob.uploadedAt
         };
       });
 

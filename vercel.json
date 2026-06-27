@@ -7,6 +7,9 @@
     },
     "api/tracks.js": {
       "includeFiles": "node_modules/@vercel/blob/dist/**"
+    },
+    "api/manage.js": {
+      "includeFiles": "node_modules/@vercel/blob/dist/**"
     }
   }
 }

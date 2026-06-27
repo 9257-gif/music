@@ -80,6 +80,15 @@ function formatTime(seconds) {
   return `${minutes}:${rest}`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function splitFileName(name) {
   const cleanName = name.replace(/\.[^/.]+$/, "").trim() || "本地音乐";
   const parts = cleanName.split(/\s+-\s+/);
@@ -115,6 +124,7 @@ function normalizeTrack(track, index) {
     duration: Number(track.duration) || 0,
     src: track.src,
     fileName: track.fileName || track.src,
+    uploadedAt: track.uploadedAt || "",
     cover: track.cover || makeUploadCover(index),
     source: track.source || "static",
     published: true
@@ -204,8 +214,8 @@ function renderTrackList() {
     <button class="track-row ${track.index === state.current ? "active" : ""}" data-index="${track.index}">
       <span class="cover" style="--cover:${track.cover}"></span>
       <span class="track-copy">
-        <strong>${track.title}</strong>
-        <span>${track.artist} · ${track.album}</span>
+        <strong>${escapeHtml(track.title)}</strong>
+        <span>${escapeHtml(track.artist)} · ${escapeHtml(track.album)}</span>
       </span>
       <span class="track-duration">${track.duration ? formatTime(track.duration) : "读取中"}</span>
     </button>
@@ -230,19 +240,34 @@ function renderCloudTrackList() {
   els.cloudTrackList.innerHTML = cloudTrackIndexes.map((trackIndex) => {
     const track = tracks[trackIndex];
     return `
-      <button class="cloud-track-row ${trackIndex === state.current ? "active" : ""}" data-index="${trackIndex}">
-        <span class="queue-cover" style="--cover:${track.cover}"></span>
-        <span class="queue-copy">
-          <strong>${track.title}</strong>
-          <span>${track.artist} · ${track.duration ? formatTime(track.duration) : "在线歌曲"}</span>
+      <div class="cloud-track-row ${trackIndex === state.current ? "active" : ""}" data-index="${trackIndex}">
+        <button class="cloud-play-button" type="button" data-index="${trackIndex}" aria-label="播放 ${escapeHtml(track.title)}">
+          <span class="queue-cover" style="--cover:${track.cover}"></span>
+          <span class="queue-copy">
+            <strong>${escapeHtml(track.title)}</strong>
+            <span>${escapeHtml(track.artist)} · ${track.duration ? formatTime(track.duration) : "在线歌曲"}</span>
+          </span>
+          <iconify-icon icon="solar:play-circle-linear"></iconify-icon>
+        </button>
+        <span class="cloud-manage-actions" aria-label="管理歌曲">
+          <button type="button" class="cloud-manage-button" data-action="rename" data-index="${trackIndex}">
+            <iconify-icon icon="solar:pen-2-linear"></iconify-icon>
+            改名
+          </button>
+          <button type="button" class="cloud-manage-button danger" data-action="delete" data-index="${trackIndex}">
+            <iconify-icon icon="solar:trash-bin-trash-linear"></iconify-icon>
+            删除
+          </button>
         </span>
-        <iconify-icon icon="solar:play-circle-linear"></iconify-icon>
-      </button>
+      </div>
     `;
   }).join("");
 
-  els.cloudTrackList.querySelectorAll(".cloud-track-row").forEach((button) => {
+  els.cloudTrackList.querySelectorAll(".cloud-play-button").forEach((button) => {
     button.addEventListener("click", () => selectTrack(Number(button.dataset.index), true));
+  });
+  els.cloudTrackList.querySelectorAll(".cloud-manage-button").forEach((button) => {
+    button.addEventListener("click", () => manageCloudTrack(button.dataset.action, Number(button.dataset.index)));
   });
 }
 
@@ -256,8 +281,8 @@ function renderQueue() {
     <button class="queue-row ${index === state.current ? "active" : ""}" data-index="${index}">
       <span class="queue-cover" style="--cover:${track.cover}"></span>
       <span class="queue-copy">
-        <strong>${track.title}</strong>
-        <span>${track.mood} · ${track.duration ? formatTime(track.duration) : "读取中"}</span>
+        <strong>${escapeHtml(track.title)}</strong>
+        <span>${escapeHtml(track.mood)} · ${track.duration ? formatTime(track.duration) : "读取中"}</span>
       </span>
     </button>
   `).join("");
@@ -616,6 +641,68 @@ async function uploadCloudTrack() {
       : message;
   } finally {
     els.cloudUploadButton.disabled = false;
+  }
+}
+
+async function requestTrackManagement(action, track, nextMeta = {}) {
+  const password = els.adminPassword.value.trim();
+
+  if (!password) {
+    throw new Error("请先在管理员上传区域输入管理员密码 9257。");
+  }
+
+  const response = await fetch("/api/manage", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      action,
+      password,
+      fileName: track.fileName,
+      ...nextMeta
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "歌曲管理失败，请稍后再试。");
+  }
+
+  return data;
+}
+
+async function manageCloudTrack(action, trackIndex) {
+  const track = tracks[trackIndex];
+  if (!track || track.source !== "cloud") return;
+
+  try {
+    if (action === "delete") {
+      const confirmed = window.confirm(`确定删除《${track.title}》吗？删除后所有打开网站的人都听不到这首歌。`);
+      if (!confirmed) return;
+
+      els.cloudUploadStatus.textContent = "正在删除歌曲...";
+      if (trackIndex === state.current) pause();
+      await requestTrackManagement("delete", track);
+      await refreshPublishedTracks(false);
+      els.cloudUploadStatus.textContent = "删除成功，管理员歌曲列表已更新。";
+      return;
+    }
+
+    if (action === "rename") {
+      const nextArtist = window.prompt("请输入新的歌手名：", track.artist);
+      if (nextArtist === null) return;
+      const nextTitle = window.prompt("请输入新的歌曲名：", track.title);
+      if (nextTitle === null) return;
+
+      els.cloudUploadStatus.textContent = "正在修改歌曲名称...";
+      await requestTrackManagement("rename", track, {
+        artist: nextArtist.trim(),
+        title: nextTitle.trim()
+      });
+      await refreshPublishedTracks(false);
+      els.cloudUploadStatus.textContent = "改名成功，管理员歌曲列表已更新。";
+    }
+  } catch (error) {
+    els.cloudUploadStatus.textContent = error?.message || "歌曲管理失败，请稍后再试。";
   }
 }
 
