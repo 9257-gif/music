@@ -1,6 +1,7 @@
-import { copy, del } from "@vercel/blob";
+import { del, get, put } from "@vercel/blob";
 
 const UPLOAD_PREFIX = "songs/uploads/";
+const TRACK_META_PATH = "songs/track-meta.json";
 
 function checkAdminPassword(password) {
   const expectedPassword = process.env.ADMIN_UPLOAD_PASSWORD;
@@ -24,30 +25,25 @@ function assertCloudPath(pathname) {
   }
 }
 
-function getFileExtension(fileName, fallback = "mp3") {
-  return fileName.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || fallback;
+async function readTrackMeta() {
+  try {
+    const result = await get(TRACK_META_PATH, { access: "public" });
+    if (!result?.stream) return {};
+    const text = await new Response(result.stream).text();
+    const parsed = JSON.parse(text || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
-function getContentType(extension) {
-  const types = {
-    mp3: "audio/mpeg",
-    m4a: "audio/mp4",
-    mp4: "audio/mp4",
-    aac: "audio/aac",
-    wav: "audio/wav",
-    ogg: "audio/ogg",
-    flac: "audio/flac"
-  };
-
-  return types[extension] || "audio/mpeg";
-}
-
-function makeSafePathPart(value) {
-  return (value || "untitled")
-    .trim()
-    .replace(/[\\/#?%*:|"<>]/g, "-")
-    .replace(/\s+/g, " ")
-    .slice(0, 80) || "untitled";
+async function writeTrackMeta(meta) {
+  await put(TRACK_META_PATH, JSON.stringify(meta, null, 2), {
+    access: "public",
+    allowOverwrite: true,
+    contentType: "application/json",
+    cacheControlMaxAge: 60
+  });
 }
 
 async function handleManage(body) {
@@ -59,6 +55,9 @@ async function handleManage(body) {
 
   if (action === "delete") {
     await del(fileName);
+    const meta = await readTrackMeta();
+    delete meta[fileName];
+    await writeTrackMeta(meta);
     return Response.json({ ok: true });
   }
 
@@ -70,13 +69,13 @@ async function handleManage(body) {
       throw new Error("歌手名和歌曲名都不能为空。");
     }
 
-    const extension = getFileExtension(fileName);
-    const newPathname = `${UPLOAD_PREFIX}${Date.now()}-${makeSafePathPart(artist)} - ${makeSafePathPart(title)}.${extension}`;
-    const copied = await copy(fileName, newPathname, {
-      access: "public",
-      contentType: getContentType(extension)
-    });
-    await del(fileName);
+    const meta = await readTrackMeta();
+    meta[fileName] = {
+      artist,
+      title,
+      updatedAt: new Date().toISOString()
+    };
+    await writeTrackMeta(meta);
 
     return Response.json({
       ok: true,
@@ -85,10 +84,8 @@ async function handleManage(body) {
         artist,
         album: "在线上传",
         mood: "在线歌曲",
-        tag: extension.toUpperCase(),
         duration: 0,
-        src: copied.url,
-        fileName: copied.pathname,
+        fileName,
         uploadedAt: new Date().toISOString()
       }
     });
