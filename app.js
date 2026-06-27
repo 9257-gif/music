@@ -1,6 +1,7 @@
 import { upload } from "@vercel/blob/client";
 
 const tracks = [];
+let cloudTrackIndexes = [];
 
 const coverPalette = [
   "linear-gradient(135deg, #211f1a 0%, #4fc3a6 44%, #efc45a 100%)",
@@ -39,6 +40,9 @@ const els = {
   cloudUploadButton: document.querySelector("#cloudUploadButton"),
   cloudFileName: document.querySelector("#cloudFileName"),
   cloudUploadStatus: document.querySelector("#cloudUploadStatus"),
+  cloudTrackList: document.querySelector("#cloudTrackList"),
+  cloudTrackCount: document.querySelector("#cloudTrackCount"),
+  refreshCloudButton: document.querySelector("#refreshCloudButton"),
   adminPassword: document.querySelector("#adminPassword"),
   adminArtist: document.querySelector("#adminArtist"),
   adminTitle: document.querySelector("#adminTitle"),
@@ -112,6 +116,7 @@ function normalizeTrack(track, index) {
     src: track.src,
     fileName: track.fileName || track.src,
     cover: track.cover || makeUploadCover(index),
+    source: track.source || "static",
     published: true
   };
 }
@@ -126,7 +131,7 @@ async function loadPublishedTracks() {
     const publishedTracks = Array.isArray(data.tracks) ? data.tracks : [];
     publishedTracks
       .filter((track) => track.src)
-      .map((track, index) => normalizeTrack(track, index))
+      .map((track, index) => normalizeTrack({ ...track, source: "static" }, index))
       .forEach((track) => loadedTracks.push(track));
   } catch {
     // No repository songs yet. Blob songs may still be available.
@@ -139,13 +144,17 @@ async function loadPublishedTracks() {
     const cloudTracks = Array.isArray(data.tracks) ? data.tracks : [];
     cloudTracks
       .filter((track) => track.src)
-      .map((track, index) => normalizeTrack(track, loadedTracks.length + index))
+      .map((track, index) => normalizeTrack({ ...track, source: "cloud" }, loadedTracks.length + index))
       .forEach((track) => loadedTracks.push(track));
   } catch {
     // Local preview or missing Blob configuration. The static library still works.
   }
 
   tracks.splice(0, tracks.length, ...loadedTracks);
+  cloudTrackIndexes = tracks
+    .map((track, index) => ({ track, index }))
+    .filter(({ track }) => track.source === "cloud")
+    .map(({ index }) => index);
 }
 
 function getMoods() {
@@ -203,6 +212,36 @@ function renderTrackList() {
   `).join("");
 
   els.trackList.querySelectorAll(".track-row").forEach((button) => {
+    button.addEventListener("click", () => selectTrack(Number(button.dataset.index), true));
+  });
+}
+
+function renderCloudTrackList() {
+  els.cloudTrackCount.textContent = `${cloudTrackIndexes.length} 首`;
+
+  if (!cloudTrackIndexes.length) {
+    els.cloudTrackList.innerHTML = `<div class="empty-list compact">
+      <strong>暂无管理员上传歌曲</strong>
+      <span>上传成功后会自动出现在这里。</span>
+    </div>`;
+    return;
+  }
+
+  els.cloudTrackList.innerHTML = cloudTrackIndexes.map((trackIndex) => {
+    const track = tracks[trackIndex];
+    return `
+      <button class="cloud-track-row ${trackIndex === state.current ? "active" : ""}" data-index="${trackIndex}">
+        <span class="queue-cover" style="--cover:${track.cover}"></span>
+        <span class="queue-copy">
+          <strong>${track.title}</strong>
+          <span>${track.artist} · ${track.duration ? formatTime(track.duration) : "在线歌曲"}</span>
+        </span>
+        <iconify-icon icon="solar:play-circle-linear"></iconify-icon>
+      </button>
+    `;
+  }).join("");
+
+  els.cloudTrackList.querySelectorAll(".cloud-track-row").forEach((button) => {
     button.addEventListener("click", () => selectTrack(Number(button.dataset.index), true));
   });
 }
@@ -273,6 +312,7 @@ function renderNowPlaying() {
 
 function render() {
   renderMoods();
+  renderCloudTrackList();
   renderTrackList();
   renderQueue();
   renderNowPlaying();
@@ -486,7 +526,8 @@ function addLocalTracks(files) {
       duration: 0,
       src: URL.createObjectURL(file),
       fileName: file.name,
-      cover: makeUploadCover(startIndex + offset)
+      cover: makeUploadCover(startIndex + offset),
+      source: "local"
     };
 
     tracks.push(track);
@@ -556,7 +597,7 @@ async function uploadCloudTrack() {
     els.adminTitle.value = "";
     await refreshPublishedTracks(true);
     selectTrack(Math.max(0, tracks.length - 1), false);
-    els.cloudUploadStatus.textContent = "上传成功，别人现在打开网址也能听到。";
+    els.cloudUploadStatus.textContent = "上传成功，已加入“管理员上传歌曲”列表。";
   } catch (error) {
     els.cloudUploadStatus.textContent = error?.message || "上传失败，请检查管理员密码和 Vercel Blob 配置。";
   } finally {
@@ -582,6 +623,12 @@ els.cloudMusicUpload.addEventListener("change", () => {
   }
 });
 els.cloudUploadButton.addEventListener("click", uploadCloudTrack);
+els.refreshCloudButton.addEventListener("click", () => {
+  els.cloudUploadStatus.textContent = "正在刷新管理员上传歌曲...";
+  refreshPublishedTracks(false).then(() => {
+    els.cloudUploadStatus.textContent = "已刷新管理员上传歌曲列表。";
+  });
+});
 
 els.playButton.addEventListener("click", togglePlay);
 els.nextButton.addEventListener("click", nextTrack);

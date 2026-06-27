@@ -62,7 +62,21 @@
 
         <div class="publish-card">
           <strong>公开歌曲库</strong>
-          <p>网站会读取 <code>songs/manifest.json</code>。这里登记的歌曲部署后，别人打开网址也能听。</p>
+          <p>管理员上传的歌曲会出现在下方专属列表里，所有打开网址的人都能播放。</p>
+        </div>
+
+        <div class="cloud-library">
+          <div class="cloud-library-heading">
+            <div>
+              <strong>管理员上传歌曲</strong>
+              <span id="cloudTrackCount">0 首</span>
+            </div>
+            <button class="mini-refresh-button" id="refreshCloudButton" type="button">
+              <iconify-icon icon="solar:refresh-linear"></iconify-icon>
+              刷新
+            </button>
+          </div>
+          <div class="cloud-track-list" id="cloudTrackList"></div>
         </div>
 
         <div class="mood-tabs" id="moodTabs" aria-label="音乐分类"></div>

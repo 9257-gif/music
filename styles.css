@@ -317,6 +317,82 @@ button {
   line-height: 1.45;
 }
 
+.cloud-library {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.cloud-library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cloud-library-heading strong,
+.cloud-library-heading span {
+  display: block;
+}
+
+.cloud-library-heading strong {
+  font-size: 14px;
+}
+
+.cloud-library-heading span {
+  margin-top: 3px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.mini-refresh-button {
+  display: inline-flex;
+  height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.cloud-track-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.cloud-track-row {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.cloud-track-row:hover,
+.cloud-track-row.active {
+  border-color: rgba(79, 195, 166, 0.36);
+  background: rgba(79, 195, 166, 0.1);
+}
+
+.cloud-track-row > iconify-icon {
+  color: var(--accent-2);
+  font-size: 21px;
+}
+
 code {
   color: var(--accent);
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -415,7 +491,8 @@ code {
 }
 
 .track-row,
-.queue-row {
+.queue-row,
+.cloud-track-row {
   width: 100%;
   min-height: 68px;
   gap: 12px;

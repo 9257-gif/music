@@ -14,15 +14,15 @@ export async function GET() {
   try {
     const result = await list({ prefix: "songs/uploads/", limit: 1000 });
     const tracks = result.blobs
-      .filter((blob) => /^audio\//.test(blob.contentType || ""))
       .map((blob, index) => {
         const meta = parseTrackName(blob.pathname, index);
+        const extension = blob.pathname.split(".").pop()?.toUpperCase() || "AUDIO";
         return {
           title: meta.title,
           artist: meta.artist,
           album: "在线上传",
           mood: "在线歌曲",
-          tag: (blob.contentType || "audio").split("/")[1]?.toUpperCase() || "Audio",
+          tag: (blob.contentType || "").split("/")[1]?.toUpperCase() || extension,
           duration: 0,
           src: blob.url,
           fileName: blob.pathname
