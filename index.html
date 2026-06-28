@@ -48,7 +48,6 @@
             <iconify-icon icon="solar:upload-track-2-linear"></iconify-icon>
             上传到网站
           </button>
-          <p id="cloudUploadStatus">上传后的歌曲会自动加入公开歌曲库。</p>
         </div>
 
         <label class="upload-card" for="musicUpload">
@@ -161,7 +160,12 @@
         <div class="queue-card">
           <div class="queue-heading">
             <h2>播放队列</h2>
-            <span id="queueState">顺序播放</span>
+            <div class="queue-heading-actions">
+              <span id="queueState">顺序播放</span>
+              <button class="queue-close-button" id="queueCloseButton" type="button" aria-label="关闭播放队列">
+                <iconify-icon icon="solar:close-circle-linear"></iconify-icon>
+              </button>
+            </div>
           </div>
           <div class="mini-eq" aria-hidden="true">
             <span></span><span></span><span></span><span></span>
@@ -178,6 +182,7 @@
         </div>
       </aside>
     </main>
+    <div class="toast-layer" id="toastLayer" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="./app.js"></script>
   </body>

@@ -46,7 +46,6 @@ const els = {
   cloudMusicUpload: document.querySelector("#cloudMusicUpload"),
   cloudUploadButton: document.querySelector("#cloudUploadButton"),
   cloudFileName: document.querySelector("#cloudFileName"),
-  cloudUploadStatus: document.querySelector("#cloudUploadStatus"),
   cloudTrackList: document.querySelector("#cloudTrackList"),
   cloudTrackCount: document.querySelector("#cloudTrackCount"),
   refreshCloudButton: document.querySelector("#refreshCloudButton"),
@@ -74,10 +73,12 @@ const els = {
   volume: document.querySelector("#volumeBar"),
   volumeValue: document.querySelector("#volumeValue"),
   queueButton: document.querySelector("#queueButton"),
+  queueCloseButton: document.querySelector("#queueCloseButton"),
   queuePanel: document.querySelector("#queuePanel"),
   queueState: document.querySelector("#queueState"),
   sessionMood: document.querySelector("#sessionMood"),
-  eq: document.querySelector(".mini-eq")
+  eq: document.querySelector(".mini-eq"),
+  toastLayer: document.querySelector("#toastLayer")
 };
 
 function formatTime(seconds) {
@@ -94,6 +95,23 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function showToast(message, type = "info") {
+  if (!els.toastLayer) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <iconify-icon icon="${type === "error" ? "solar:danger-circle-linear" : type === "success" ? "solar:check-circle-linear" : "solar:info-circle-linear"}"></iconify-icon>
+    <span>${escapeHtml(message)}</span>
+  `;
+  els.toastLayer.append(toast);
+  window.setTimeout(() => toast.classList.add("show"), 20);
+  window.setTimeout(() => {
+    toast.classList.remove("show");
+    toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+  }, 3200);
 }
 
 function splitFileName(name) {
@@ -579,6 +597,7 @@ function addLocalTracks(files) {
   state.query = "";
   els.searchInput.value = "";
   els.uploadHint.textContent = `已临时导入 ${audioFiles.length} 首；刷新页面后会消失`;
+  showToast(`已临时导入 ${audioFiles.length} 首，本机可试听。`, "success");
   render();
   selectTrack(startIndex, true);
 }
@@ -601,22 +620,22 @@ async function uploadCloudTrack() {
   const title = els.adminTitle.value.trim() || parsed.title;
 
   if (!file) {
-    els.cloudUploadStatus.textContent = "请先选择一首音频文件。";
+    showToast("请先选择一首音频文件。", "error");
     return;
   }
 
   if (!password) {
-    els.cloudUploadStatus.textContent = "请输入管理员密码。";
+    showToast("请输入管理员密码。", "error");
     return;
   }
 
   if (!file.type.startsWith("audio/")) {
-    els.cloudUploadStatus.textContent = "请选择 MP3、M4A、WAV 等音频文件。";
+    showToast("请选择 MP3、M4A、WAV 等音频文件。", "error");
     return;
   }
 
   els.cloudUploadButton.disabled = true;
-  els.cloudUploadStatus.textContent = "正在上传，请不要关闭页面...";
+  showToast("正在上传，请不要关闭页面...", "info");
 
   try {
     const checkResponse = await fetch(`${API_BASE_URL}/api/upload`, {
@@ -638,18 +657,18 @@ async function uploadCloudTrack() {
       clientPayload: JSON.stringify({ password, artist, title })
     });
 
-    els.cloudUploadStatus.textContent = "上传成功，正在刷新公开歌曲库...";
+    showToast("上传成功，正在刷新公开歌曲库...", "success");
     els.cloudMusicUpload.value = "";
     els.cloudFileName.textContent = "选择要公开上传的歌曲";
     els.adminTitle.value = "";
     await refreshPublishedTracks(true);
     selectTrack(Math.max(0, tracks.length - 1), false);
-    els.cloudUploadStatus.textContent = "上传成功，已加入“管理员上传歌曲”列表。";
+    showToast("上传成功，已加入管理员上传歌曲列表。", "success");
   } catch (error) {
     const message = error?.message || "上传失败，请检查管理员密码和 Vercel Blob 配置。";
-    els.cloudUploadStatus.textContent = message.includes("retrieve the client token")
-      ? "上传失败：请确认密码是 9257，并刷新页面后重试。"
-      : message;
+    showToast(message.includes("retrieve the client token")
+      ? "上传失败：请确认管理员密码，并刷新页面后重试。"
+      : message, "error");
   } finally {
     els.cloudUploadButton.disabled = false;
   }
@@ -659,7 +678,7 @@ async function requestTrackManagement(action, track, nextMeta = {}) {
   const password = els.adminPassword.value.trim();
 
   if (!password) {
-    throw new Error("请先在管理员上传区域输入管理员密码 9257。");
+    throw new Error("请先在管理员上传区域输入管理员密码。");
   }
 
   const response = await fetch(`${API_BASE_URL}/api/manage`, {
@@ -701,7 +720,7 @@ async function manageCloudTrack(action, trackIndex) {
       const confirmed = window.confirm(`确定删除《${track.title}》吗？删除后所有打开网站的人都听不到这首歌。`);
       if (!confirmed) return;
 
-      els.cloudUploadStatus.textContent = "正在删除歌曲...";
+      showToast("正在删除歌曲...", "info");
       if (trackIndex === state.current) pause();
       await requestTrackManagement("delete", track);
       const serverTracks = await getServerCloudTracks();
@@ -717,7 +736,7 @@ async function manageCloudTrack(action, trackIndex) {
       state.elapsed = 0;
       rebuildCloudIndexes();
       render();
-      els.cloudUploadStatus.textContent = "删除成功，管理员歌曲列表已更新。";
+      showToast("删除成功，管理员歌曲列表已更新。", "success");
       return;
     }
 
@@ -727,7 +746,7 @@ async function manageCloudTrack(action, trackIndex) {
       const nextTitle = window.prompt("请输入新的歌曲名：", track.title);
       if (nextTitle === null) return;
 
-      els.cloudUploadStatus.textContent = "正在修改歌曲名称...";
+      showToast("正在修改歌曲名称...", "info");
       const data = await requestTrackManagement("rename", track, {
         artist: nextArtist.trim(),
         title: nextTitle.trim()
@@ -751,10 +770,10 @@ async function manageCloudTrack(action, trackIndex) {
         if (wasPlaying) play();
       }
       render();
-      els.cloudUploadStatus.textContent = "改名成功，管理员歌曲列表已更新。";
+      showToast("改名成功，管理员歌曲列表已更新。", "success");
     }
   } catch (error) {
-    els.cloudUploadStatus.textContent = error?.message || "歌曲管理失败，请稍后再试。";
+    showToast(error?.message || "歌曲管理失败，请稍后再试。", "error");
   }
 }
 
@@ -777,9 +796,9 @@ els.cloudMusicUpload.addEventListener("change", () => {
 });
 els.cloudUploadButton.addEventListener("click", uploadCloudTrack);
 els.refreshCloudButton.addEventListener("click", () => {
-  els.cloudUploadStatus.textContent = "正在刷新管理员上传歌曲...";
+  showToast("正在刷新管理员上传歌曲...", "info");
   refreshPublishedTracks(false).then(() => {
-    els.cloudUploadStatus.textContent = "已刷新管理员上传歌曲列表。";
+    showToast("已刷新管理员上传歌曲列表。", "success");
   });
 });
 
@@ -823,6 +842,9 @@ els.volume.addEventListener("input", (event) => {
 });
 els.queueButton.addEventListener("click", () => {
   els.queuePanel.classList.toggle("open");
+});
+els.queueCloseButton.addEventListener("click", () => {
+  els.queuePanel.classList.remove("open");
 });
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space" && document.activeElement.tagName !== "INPUT") {

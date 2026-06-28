@@ -10,7 +10,7 @@ function checkAdminPassword(password) {
   }
 
   if (password !== expectedPassword) {
-    throw new Error("管理员密码不正确，请输入 9257。");
+    throw new Error("管理员密码不正确。");
   }
 }
 
