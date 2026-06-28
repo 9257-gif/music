@@ -73,7 +73,6 @@ const els = {
   volume: document.querySelector("#volumeBar"),
   volumeValue: document.querySelector("#volumeValue"),
   queueButton: document.querySelector("#queueButton"),
-  queueCloseButton: document.querySelector("#queueCloseButton"),
   queuePanel: document.querySelector("#queuePanel"),
   queueState: document.querySelector("#queueState"),
   sessionMood: document.querySelector("#sessionMood"),
@@ -320,6 +319,7 @@ function renderQueue() {
     button.addEventListener("click", () => {
       selectTrack(Number(button.dataset.index), true);
       els.queuePanel.classList.remove("open");
+      els.queueButton.classList.remove("active");
     });
   });
 }
@@ -842,9 +842,7 @@ els.volume.addEventListener("input", (event) => {
 });
 els.queueButton.addEventListener("click", () => {
   els.queuePanel.classList.toggle("open");
-});
-els.queueCloseButton.addEventListener("click", () => {
-  els.queuePanel.classList.remove("open");
+  els.queueButton.classList.toggle("active", els.queuePanel.classList.contains("open"));
 });
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space" && document.activeElement.tagName !== "INPUT") {
@@ -853,7 +851,10 @@ document.addEventListener("keydown", (event) => {
   }
   if (event.key === "ArrowRight") nextTrack();
   if (event.key === "ArrowLeft") prevTrack();
-  if (event.key === "Escape") els.queuePanel.classList.remove("open");
+  if (event.key === "Escape") {
+    els.queuePanel.classList.remove("open");
+    els.queueButton.classList.remove("active");
+  }
 });
 
 refreshPublishedTracks();
