@@ -1,9 +1,10 @@
 import { upload } from "@vercel/blob/client";
 
 const CANONICAL_SITE_URL = "https://music-eight-ochre.vercel.app";
-const API_BASE_URL = window.location.hostname.endsWith("github.io") ? CANONICAL_SITE_URL : "";
+const shouldRedirectToCanonical = window.location.protocol === "file:" || window.location.hostname.endsWith("github.io");
+const API_BASE_URL = shouldRedirectToCanonical ? CANONICAL_SITE_URL : "";
 
-if (window.location.hostname.endsWith("github.io")) {
+if (shouldRedirectToCanonical) {
   window.location.replace(CANONICAL_SITE_URL);
 }
 
