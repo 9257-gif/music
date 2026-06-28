@@ -73,6 +73,7 @@ const els = {
   volume: document.querySelector("#volumeBar"),
   volumeValue: document.querySelector("#volumeValue"),
   queueButton: document.querySelector("#queueButton"),
+  queueBackButton: document.querySelector("#queueBackButton"),
   queuePanel: document.querySelector("#queuePanel"),
   queueState: document.querySelector("#queueState"),
   sessionMood: document.querySelector("#sessionMood"),
@@ -843,6 +844,10 @@ els.volume.addEventListener("input", (event) => {
 els.queueButton.addEventListener("click", () => {
   els.queuePanel.classList.toggle("open");
   els.queueButton.classList.toggle("active", els.queuePanel.classList.contains("open"));
+});
+els.queueBackButton.addEventListener("click", () => {
+  els.queuePanel.classList.remove("open");
+  els.queueButton.classList.remove("active");
 });
 document.addEventListener("keydown", (event) => {
   if (event.code === "Space" && document.activeElement.tagName !== "INPUT") {
